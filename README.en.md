@@ -2,7 +2,7 @@
 
 > An AI-powered Chinese-meme tier list: 夯(Hang) / 顶级(Top) / 人上人(Elite) / NPC / 拉完了(La)
 
-![screenshot](screenshot.png)
+![screenshot](screenshot-en.png)
 
 **[Try it live](https://liyuankui.github.io/hang2la/)** · zero install, zero backend, fully static
 
