@@ -64,7 +64,12 @@
       <input id="set-baseurl" placeholder="https://…/v1">
     </label>
     <label>模型
-      <input id="set-model" placeholder="如 google/gemma-4-31b-it:free">
+      <div class="model-row">
+        <input id="set-model" list="free-models" placeholder="如 google/gemma-4-31b-it:free">
+        <button id="btn-fetch-models" class="ghost" type="button">刷新</button>
+      </div>
+      <datalist id="free-models"></datalist>
+      <span id="free-models-hint" class="hint"></span>
     </label>
     <label>API Key
       <input id="set-key" type="password" autocomplete="off" placeholder="只存本浏览器">

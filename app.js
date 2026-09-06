@@ -1,11 +1,12 @@
 import { TIERS, parseItems, buildPrompt, parseTierResult, toMarkdown } from './tier.js'
-import { PROVIDERS, chat } from './llm.js'
+import { PROVIDERS, chat, fetchFreeModels } from './llm.js'
 import { fetchImageDataURL, imageUrl } from './image.js'
 
 const $ = (id) => document.getElementById(id)
 const els = ['topic', 'items', 'btn-demo', 'btn-manual', 'btn-ai', 'btn-settings', 'btn-img', 'btn-png', 'btn-md',
   'board-wrap', 'board', 'board-title', 'board-title-text', 'settings', 'set-provider', 'set-baseurl',
-  'set-model', 'set-key', 'set-save', 'set-cancel', 'key-url', 'key-hint', 'toast', 'opt-analytics']
+  'set-model', 'set-key', 'set-save', 'set-cancel', 'key-url', 'key-hint', 'toast', 'opt-analytics',
+  'btn-fetch-models', 'free-models', 'free-models-hint']
   .reduce((m, id) => ((m[id] = $(id)), m), {})
 
 // ── PostHog 匿名统计(可关,关后零请求) ─────────────────────────
@@ -210,7 +211,7 @@ els['btn-ai'].addEventListener('click', async () => {
     renderBoard()
     track('tier_generate', { provider: config.provider, model: config.model, count: items.length, ms: Date.now() - t0, ok: true })
   } catch (e) {
-    toast(`出错了:${e.message}`)
+    toast(/429/.test(e.message) ? '免费模型限流了,去 ⚙ 设置换个免费模型再试' : `出错了:${e.message}`)
     track('tier_generate', { provider: config.provider, ok: false })
   } finally {
     btn.disabled = false
@@ -372,6 +373,35 @@ function fillProviderForm(p) {
   els['key-url'].href = p.keyUrl || '#'
   els['key-hint'].style.display = p.keyUrl ? '' : 'none'
 }
+// ── 免费模型选择器(datalist,24h 缓存,仅 OpenRouter) ────────────
+const MODELS_CACHE_KEY = 'hang2la-free-models'
+const MODELS_TTL = 24 * 3600 * 1000
+
+function fillModelOptions(list) {
+  els['free-models'].replaceChildren(...list.map((id) => new Option(id, id)))
+  els['free-models-hint'].textContent = list.length
+    ? `${list.length} 个免费模型,点输入框即可选择`
+    : '没拉到列表,可手填模型名'
+}
+
+async function loadFreeModels({ force = false } = {}) {
+  const cached = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null')
+  if (!force && cached && Date.now() - cached.t < MODELS_TTL) {
+    fillModelOptions(cached.list)
+    return
+  }
+  els['free-models-hint'].textContent = '拉取免费模型列表…'
+  try {
+    const list = await fetchFreeModels('https://openrouter.ai/api/v1')
+    localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ t: Date.now(), list }))
+    fillModelOptions(list)
+  } catch {
+    fillModelOptions(cached?.list ?? [])
+  }
+}
+
+els['btn-fetch-models'].addEventListener('click', () => loadFreeModels({ force: true }))
+
 function openSettings() {
   els['set-provider'].replaceChildren(
     ...PROVIDERS.map((p) => new Option(p.label, p.id, false, p.id === config.provider)),
@@ -382,6 +412,7 @@ function openSettings() {
   els['set-model'].value = config.model
   els['set-key'].value = config.apiKey
   els['settings'].showModal()
+  if (config.provider === 'openrouter') loadFreeModels()
 }
 els['btn-settings'].addEventListener('click', openSettings)
 els['set-provider'].addEventListener('change', (e) => {

@@ -38,6 +38,17 @@ export const PROVIDERS = [
   },
 ]
 
+// 拉取 OpenRouter 当前可用的免费模型(公开接口,无需 key)
+export async function fetchFreeModels(baseUrl) {
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/models`)
+  if (!res.ok) throw new Error(`拉模型列表失败 ${res.status}`)
+  const data = await res.json()
+  return (data?.data ?? [])
+    .map((m) => m.id)
+    .filter((id) => id.endsWith(':free'))
+    .sort()
+}
+
 async function post(url, body, apiKey) {
   const res = await fetch(url, {
     method: 'POST',
