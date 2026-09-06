@@ -6,6 +6,7 @@ import {
   parseTierResult,
   buildPrompt,
   buildItemsPrompt,
+  buildMoreItemsPrompt,
   parseItemsResponse,
   toMarkdown,
   TIERS,
@@ -147,6 +148,15 @@ describe('buildPrompt / buildItemsPrompt / toMarkdown', () => {
     expect(parseItemsResponse('```json\n{"items":["喜茶","奈雪","一点点的奶茶"]}\n```', 3)).toEqual(['喜茶', '奈雪', '一点点的奶茶'])
     expect(parseItemsResponse('["a","b","c","d"]', 2)).toEqual(['a', 'b'])
     expect(() => parseItemsResponse('{"nope":1}', 3)).toThrow()
+  })
+  test('补齐轮 prompt 带已有条目与差缺数', () => {
+    const p = buildMoreItemsPrompt('奶茶品牌', 7, ['喜茶', '奈雪'])
+    expect(p).toContain('7')
+    expect(p).toContain('喜茶、奈雪')
+    expect(p).toContain('不重复')
+    const e = buildMoreItemsPrompt('snacks', 3, ['chips'], 'en')
+    expect(e).toContain('chips')
+    expect(e).toContain('exactly 3')
   })
   test('markdown 分档输出且带来源(双语)', () => {
     const md = toMarkdown('奶茶', [

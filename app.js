@@ -1,4 +1,4 @@
-import { TIERS, tierLabel, parseItems, buildPrompt, buildItemsPrompt, parseItemsResponse, parseTierResult, toMarkdown } from './tier.js'
+import { TIERS, tierLabel, parseItems, buildPrompt, buildItemsPrompt, buildMoreItemsPrompt, parseItemsResponse, parseTierResult, toMarkdown } from './tier.js'
 import { PROVIDERS, chat, fetchFreeModels } from './llm.js'
 import { fetchImageDataURL, imageUrl } from './image.js'
 
@@ -254,12 +254,25 @@ els['btn-gen-items'].addEventListener('click', async () => {
   btn.dataset.orig = btn.textContent
   btn.textContent = t('gen_loading')
   try {
-    const content = await chat({ ...config, prompt: buildItemsPrompt(topic, count, lang) })
-    const fresh = parseItemsResponse(content, count)
+    // LLM 常数不对数:不足则补齐轮(最多 3 轮,无新增即止)
+    const seen = new Set()
+    const fresh = []
+    for (let round = 0; round < 3 && fresh.length < count; round++) {
+      btn.textContent = round === 0 ? t('gen_loading') : `${t('gen_loading')} ${fresh.length}/${count}`
+      const need = count - fresh.length
+      const prompt = round === 0
+        ? buildItemsPrompt(topic, count, lang)
+        : buildMoreItemsPrompt(topic, need, fresh, lang)
+      const content = await chat({ ...config, prompt })
+      const batch = parseItemsResponse(content, need).filter((x) => !seen.has(x.toLowerCase()))
+      for (const x of batch) seen.add(x.toLowerCase())
+      fresh.push(...batch)
+      if (!batch.length) break
+    }
     const merged = parseItems(els['items'].value + '\n' + fresh.join('\n'))
     els['items'].value = merged.join('\n')
     toast(t('gen_ok', fresh.length))
-    track('items_generate', { ok: true, count: fresh.length })
+    track('items_generate', { ok: true, count: fresh.length, requested: count })
   } catch (e) {
     toast(t('gen_fail', /429/.test(e.message) ? t('ai_429') : e.message))
     track('items_generate', { ok: false })

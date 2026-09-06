@@ -129,9 +129,17 @@ export function buildPrompt(topic, items, lang = 'zh') {
 // AI 补条目:主题 → N 个条目
 export function buildItemsPrompt(topic, count, lang = 'zh') {
   if (lang === 'en') {
-    return `Brainstorm ${count} most representative, recognizable items about "${topic}" for a tier list ranking. Be specific, no duplicates. Output JSON only: {"items":["item1","item2",...]}`
+    return `Brainstorm ${count} most representative, recognizable items about "${topic}" for a tier list ranking. Each item MUST be a rankable entity of the same kind as the topic (a brand / product / person / work etc.) — NOT phenomena, behaviors, memes or events. Be specific, no duplicates. IMPORTANT: you MUST return exactly ${count} items, count carefully. Output JSON only: {"items":["item1","item2",...]}`
   }
-  return `围绕主题「${topic}」头脑风暴出 ${count} 个最具代表性、有辨识度的排榜条目,要具体,不重复。只输出 JSON:{"items":["条目1","条目2",...]}`
+  return `围绕主题「${topic}」头脑风暴出 ${count} 个最具代表性、有辨识度的排榜条目。每个条目必须是同一类型的可排名实体(品牌/产品/人物/作品等),不要列现象、行为、营销事件或梗。要具体,不重复。注意:必须正好列出 ${count} 个,数清楚再输出。只输出 JSON:{"items":["条目1","条目2",...]}`
+}
+
+// 数量不足时的补齐轮
+export function buildMoreItemsPrompt(topic, need, existing, lang = 'zh') {
+  if (lang === 'en') {
+    return `About "${topic}", we already have these items: ${existing.join(', ')}. List exactly ${need} MORE distinct rankable entities of the same kind (no phenomena/memes/events, no repeats of existing ones). Count carefully, output exactly ${need}. JSON only: {"items":[...]}`
+  }
+  return `关于主题「${topic}」,已有条目:${existing.join('、')}。请再补充正好 ${need} 个不重复的新条目,必须是与主题同类的可排名实体(不要现象/梗/事件,也不要与已有的重复),数清楚数量。只输出 JSON:{"items":[...]}`
 }
 
 export function parseItemsResponse(raw, count) {

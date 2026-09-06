@@ -78,6 +78,7 @@ export async function chat({ baseUrl, apiKey, model, prompt, signal }) {
     model,
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
+    max_tokens: 4000, // 防 JSON 被 default 截断(30 条清单绰绰有余)
   }
   let data
   try {
