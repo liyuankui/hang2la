@@ -11,6 +11,7 @@
 | `manual_start` | 点「手动开排」 | |
 | `tier_generate` | AI 分档完成/失败 | `provider`, `model?`, `count?`, `ms?`, `ok` |
 | `tier_adjust` | 拖拽换档 | `to`(档位 id 或 inbox) |
+| `image_generate` | AI 配图批次结束 | `ok`, `fail`, `total` |
 | `png_export` | 导出 PNG | |
 | `md_copy` | 复制文案 | |
 | `settings_save` | 保存 AI 设置 | `provider` |

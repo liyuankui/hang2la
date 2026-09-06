@@ -1,8 +1,9 @@
 import { TIERS, parseItems, buildPrompt, parseTierResult, toMarkdown } from './tier.js'
 import { PROVIDERS, chat } from './llm.js'
+import { fetchImageDataURL, imageUrl } from './image.js'
 
 const $ = (id) => document.getElementById(id)
-const els = ['topic', 'items', 'btn-demo', 'btn-manual', 'btn-ai', 'btn-settings', 'btn-png', 'btn-md',
+const els = ['topic', 'items', 'btn-demo', 'btn-manual', 'btn-ai', 'btn-settings', 'btn-img', 'btn-png', 'btn-md',
   'board-wrap', 'board', 'board-title', 'board-title-text', 'settings', 'set-provider', 'set-baseurl',
   'set-model', 'set-key', 'set-save', 'set-cancel', 'key-url', 'key-hint', 'toast', 'opt-analytics']
   .reduce((m, id) => ((m[id] = $(id)), m), {})
@@ -51,9 +52,9 @@ const defaultConfig = () => {
 let config = { ...defaultConfig(), ...JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}') }
 
 // ── 状态与渲染 ──────────────────────────────────────────────────
-let state = { topic: '', results: [] } // results: [{name, tier(null=待分档), reason}]
+let state = { topic: '', results: [] } // results: [{name, tier(null=待分档), reason, emoji?, image?(URL), imageLoaded?}]
 
-function renderBoard() {
+function renderBoard(onImageSettled) {
   const { topic, results } = state
   els['board-wrap'].hidden = false
   els['board-title'].textContent = topic ? `${topic} · 从夯到拉` : '从夯到拉'
@@ -87,6 +88,26 @@ function renderBoard() {
       chip.dataset.name = m.name
       const name = document.createElement('div')
       name.className = 'name'
+      if (m.image && !m.imageFailed && !m.imagePending) {
+        const avatar = document.createElement('img')
+        avatar.src = m.image
+        avatar.alt = ''
+        avatar.width = 22
+        avatar.height = 22
+        avatar.onload = () => {
+          if (m.imageLoaded) return // 重建渲染的缓存命中,不重复计数
+          m.imageLoaded = true
+          onImageSettled?.(m, true)
+        }
+        avatar.onerror = () => {
+          if (m.imageFailed) return
+          m.imageFailed = true
+          m.image = ''
+          onImageSettled?.(m, false)
+        }
+        name.appendChild(avatar)
+        name.appendChild(document.createTextNode(' '))
+      }
       if (m.emoji) {
         const emoji = document.createElement('span')
         emoji.className = 'emoji'
@@ -197,13 +218,106 @@ els['btn-ai'].addEventListener('click', async () => {
   }
 })
 
+// ── AI 配图(免费生图,受控队列:并发 2,失败自动重试 1 次) ──────
+els['btn-img'].addEventListener('click', () => {
+  const todo = state.results.filter((r) => !r.image)
+  if (!todo.length) return toast('配图已齐,刷新页面可重新生成')
+  const btn = els['btn-img']
+  btn.disabled = true
+  btn.dataset.orig = btn.textContent
+  const total = todo.length
+  const callbacks = new Map() // name → 该条本轮的 settle 回调
+  let done = 0
+  let fail = 0
+  let inflight = 0
+  const paint = () => (btn.textContent = `配图中 ${done + fail}/${total}…`)
+  paint()
+
+  const finishBatch = () => {
+    btn.disabled = false
+    btn.textContent = btn.dataset.orig
+    track('image_generate', { ok: done, fail, total })
+    toast(fail ? `配图完成,${fail} 张失败,可再点一次重试` : '配图完成 ✨')
+  }
+
+  const launchNext = () => {
+    while (inflight < 1) {
+      const r = todo.find((x) => !x.started)
+      if (!r) {
+        if (done + fail >= total) finishBatch()
+        return
+      }
+      r.started = true
+      r.imagePending = false
+      r.imageFailed = false
+      r.imageLoaded = false
+      r.image = imageUrl(state.topic || 'tier list', r.name)
+      inflight++
+      callbacks.set(r.name, (row, ok) => {
+        if (!ok && !row.retried) {
+          row.retried = true
+          row.image = ''
+          row.started = false
+          setTimeout(() => {
+            inflight--
+            launchNext()
+          }, 3000)
+          return
+        }
+        callbacks.delete(row.name)
+        inflight--
+        ok ? done++ : fail++
+        paint()
+        setTimeout(launchNext, ok ? 600 : 3000) // 节流:给免费限流窗口留呼吸
+      })
+      renderBoard((row, ok) => callbacks.get(row.name)?.(row, ok))
+    }
+  }
+
+  for (const r of todo) {
+    r.image = ''
+    r.imagePending = true
+    r.imageFailed = false
+    r.imageLoaded = false
+    r.started = false
+    r.retried = false
+  }
+  launchNext()
+})
+
 // ── 导出 PNG(SVG foreignObject,零依赖) ─────────────────────────
 els['btn-png'].addEventListener('click', async () => {
+  const btn = els['btn-png']
+  btn.disabled = true
+  btn.dataset.orig = btn.textContent
+  btn.textContent = '导出中…'
+  try {
+    await exportPNG()
+  } finally {
+    btn.disabled = false
+    btn.textContent = btn.dataset.orig
+  }
+})
+
+async function exportPNG() {
   const node = $('export-root')
   const W = node.offsetWidth
   const H = node.scrollHeight
   const css = await (await fetch('style.css')).text()
   const clone = node.cloneNode(true)
+  // 外域图片进 SVG 会裂:已加载的转 dataURL,未就绪的剔除
+  for (const chipEl of clone.querySelectorAll('.chip')) {
+    const r = state.results.find((x) => x.name === chipEl.dataset.name)
+    const img = chipEl.querySelector('img')
+    if (!img) continue
+    if (r?.image && r.imageLoaded) {
+      try {
+        img.src = await fetchImageDataURL(r.image, 20000)
+        continue
+      } catch {}
+    }
+    img.remove()
+  }
   const wrap = document.createElement('div')
   wrap.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml')
   wrap.style.cssText = `width:${W}px;background:#fff;border-radius:16px;overflow:hidden`
@@ -236,7 +350,7 @@ els['btn-png'].addEventListener('click', async () => {
     URL.revokeObjectURL(a.href)
   })
   track('png_export')
-})
+}
 
 // ── 复制 Markdown 文案 ──────────────────────────────────────────
 els['btn-md'].addEventListener('click', async () => {

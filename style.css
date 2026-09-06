@@ -154,6 +154,7 @@ button:active { transform: scale(0.97); }
 }
 .chip:active { cursor: grabbing; }
 .chip .name { font-size: 14px; font-weight: 600; }
+.chip .name img { border-radius: 6px; vertical-align: -5px; }
 .chip .emoji { font-size: 16px; font-weight: 400; }
 .chip .reason { font-size: 11px; color: var(--muted); }
 
