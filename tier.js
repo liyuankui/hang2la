@@ -1,21 +1,23 @@
 // tier.js — 档位定义与纯逻辑,无 DOM 依赖(浏览器与测试共用)
 
 export const TIERS = [
-  { id: 'hang',  label: '夯',     slogan: '强到无需多言', colors: ['#ff4d4f', '#ffa940'] },
-  { id: 'top',   label: '顶级',   slogan: '标杆水平',     colors: ['#a855f7', '#6366f1'] },
-  { id: 'elite', label: '人上人', slogan: '性价比之选',   colors: ['#0ea5e9', '#22d3ee'] },
-  { id: 'npc',   label: 'NPC',    slogan: '查无此人',     colors: ['#94a3b8', '#cbd5e1'] },
-  { id: 'la',    label: '拉完了', slogan: '地板砖',       colors: ['#78716c', '#a8a29e'] },
+  { id: 'hang',  label: '夯',     en: 'GOATED',  slogan: '强到无需多言', enSlogan: 'needs no intro',    colors: ['#ff4d4f', '#ffa940'] },
+  { id: 'top',   label: '顶级',   en: 'S-TIER',  slogan: '标杆水平',     enSlogan: 'the benchmark',     colors: ['#a855f7', '#6366f1'] },
+  { id: 'elite', label: '人上人', en: 'A-TIER',  slogan: '性价比之选',   enSlogan: 'great value',       colors: ['#0ea5e9', '#22d3ee'] },
+  { id: 'npc',   label: 'NPC',    en: 'NPC',     slogan: '查无此人',     enSlogan: 'background extra',  colors: ['#94a3b8', '#cbd5e1'] },
+  { id: 'la',    label: '拉完了', en: 'TRASHED', slogan: '地板砖',       enSlogan: 'rock bottom',       colors: ['#78716c', '#a8a29e'] },
 ]
+
+export const tierLabel = (t, lang) => (lang === 'en' ? t.en : t.label)
 
 export const MAX_ITEMS = 30
 
 const TIER_ALIASES = {
-  hang: ['夯', 'hang', 's', '神', '天花板', 't0'],
-  top: ['顶级', 'top', 'a', '标杆', 't1'],
-  elite: ['人上人', 'elite', 'b', '优秀', 't2'],
+  hang: ['夯', 'hang', 's', 's+', '神', '天花板', 't0', 'goated', 'goat'],
+  top: ['顶级', 'top', 'a', '标杆', 't1', 's-tier', 'stier', 'a-tier', 'atier'],
+  elite: ['人上人', 'elite', 'b', '优秀', 't2', 'solid'],
   npc: ['npc', 'c', '中庸', '平庸', 't3'],
-  la: ['拉完了', '拉', 'la', 'l', 'f', '拉胯', '垫底', '拉闸', 't4'],
+  la: ['拉完了', '拉', 'la', 'l', 'f', '拉胯', '垫底', '拉闸', 't4', 'trashed', 'flop'],
 }
 
 // 文本 → 条目数组:按行拆、去序号、去重、限量
@@ -96,9 +98,8 @@ export function parseTierResult(raw, items) {
   })
 }
 
-export function buildPrompt(topic, items) {
-  const labels = TIERS.map((t) => t.label).join('/')
-  return `你是中文互联网梗文化的排榜专家。请把以下条目分入五档:${labels}。
+const PROMPTS = {
+  zh: (topic, items, labels) => `你是中文互联网梗文化的排榜专家。请把以下条目分入五档:${labels}。
 主题:${topic}
 条目:${items.join('、')}
 
@@ -107,19 +108,50 @@ export function buildPrompt(topic, items) {
 2. 「夯」最强,「拉完了」最差,按大众口碑与你的判断排
 3. 每条给一句不超过 20 字的毒舌点评,幽默但别刻薄到人身攻击
 4. 每条配一个最贴合的 emoji(单个,别用组合表情)
-5. 只输出 JSON,格式:{"results":[{"name":"条目","tier":"档位(夯/顶级/人上人/NPC/拉完了)","reason":"点评","emoji":"🚀"}]}`
+5. 只输出 JSON,格式:{"results":[{"name":"条目","tier":"档位(${labels})","reason":"点评","emoji":"🚀"}]}`,
+  en: (topic, items, labels) => `You are a meme-culture tier list expert. Sort these items into five tiers: ${labels}.
+Topic: ${topic}
+Items: ${items.join(', ')}
+
+Rules:
+1. Every item goes into exactly one tier, no omissions
+2. GOATED is best, TRASHED is worst; rank by mainstream reputation and your judgment
+3. Give each item one snarky comment under 15 words, funny but no personal attacks
+4. Give each item one fitting emoji (single, no combos)
+5. Output JSON only: {"results":[{"name":"item","tier":"tier (${labels})","reason":"comment","emoji":"🚀"}]}`,
+}
+
+export function buildPrompt(topic, items, lang = 'zh') {
+  const labels = TIERS.map((t) => (lang === 'en' ? t.en : t.label)).join('/')
+  return PROMPTS[lang](topic, items, labels)
+}
+
+// AI 补条目:主题 → N 个条目
+export function buildItemsPrompt(topic, count, lang = 'zh') {
+  if (lang === 'en') {
+    return `Brainstorm ${count} most representative, recognizable items about "${topic}" for a tier list ranking. Be specific, no duplicates. Output JSON only: {"items":["item1","item2",...]}`
+  }
+  return `围绕主题「${topic}」头脑风暴出 ${count} 个最具代表性、有辨识度的排榜条目,要具体,不重复。只输出 JSON:{"items":["条目1","条目2",...]}`
+}
+
+export function parseItemsResponse(raw, count) {
+  const data = extractJson(raw)
+  const list = Array.isArray(data) ? data : data.items
+  if (!Array.isArray(list)) throw new Error('JSON 里没有条目数组')
+  return list.map((s) => String(s).trim().slice(0, 40)).filter(Boolean).slice(0, count)
 }
 
 // 榜单 → Markdown 分享文本
-export function toMarkdown(topic, results) {
-  const lines = [`# ${topic} · 从夯到拉`, '']
+export function toMarkdown(topic, results, lang = 'zh') {
+  const title = lang === 'en' ? `${topic} · Tier List` : `${topic} · 从夯到拉`
+  const lines = [`# ${title}`, '']
   for (const t of TIERS) {
     const rows = results.filter((r) => r.tier === t.id)
     if (!rows.length) continue
-    lines.push(`## ${t.label}`, '')
+    lines.push(`## ${tierLabel(t, lang)}`, '')
     for (const r of rows) lines.push(`- **${r.emoji ? `${r.emoji} ` : ''}${r.name}**${r.reason ? ` — ${r.reason}` : ''}`)
     lines.push('')
   }
-  lines.push('> 由 hang2la 智能生成')
+  lines.push(lang === 'en' ? '> Made with hang2la' : '> 由 hang2la 智能生成')
   return lines.join('\n')
 }

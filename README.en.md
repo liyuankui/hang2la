@@ -10,9 +10,11 @@ Type a topic and a list of items; the AI sorts everything into five tiers with o
 
 ## How to play
 
-1. Enter a topic and items (one per line, up to 30)
-2. Hit "🔥 智能分档" (AI tier) — or go keyless with manual mode
-3. Drag to fine-tune → export PNG / copy markdown
+1. Enter a topic and items (one per line, up to 30) — or type a count and hit "✨ AI list items" to have AI brainstorm them
+2. Hit "🔥 AI Tier It" — or go keyless with manual mode
+3. Optional "🎨 AI Icons": free AI-generated icons per item (no key needed, via Pollinations; serial generation takes 1-2 min, click again to fill failures)
+4. Drag to fine-tune → export PNG / copy text
+5. Toggle 中文 / EN in the header — bilingual UI with meme-accurate tier names (夯/顶级/人上人/NPC/拉完了 ↔ GOATED/S-TIER/A-TIER/NPC/TRASHED)
 
 ## Free AI access
 

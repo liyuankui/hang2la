@@ -5,8 +5,11 @@ import {
   extractJson,
   parseTierResult,
   buildPrompt,
+  buildItemsPrompt,
+  parseItemsResponse,
   toMarkdown,
   TIERS,
+  tierLabel,
 } from './tier.js'
 
 describe('parseItems', () => {
@@ -33,11 +36,16 @@ describe('normalizeTier', () => {
   test('中文/英文/别名/大小写归一', () => {
     expect(normalizeTier('夯')).toBe('hang')
     expect(normalizeTier('S')).toBe('hang')
+    expect(normalizeTier('GOATED')).toBe('hang')
     expect(normalizeTier('top')).toBe('top')
+    expect(normalizeTier('S-TIER')).toBe('top')
     expect(normalizeTier('人上人')).toBe('elite')
+    expect(normalizeTier('SOLID')).toBe('elite')
     expect(normalizeTier('NPC')).toBe('npc')
     expect(normalizeTier('拉胯')).toBe('la')
     expect(normalizeTier('F')).toBe('la')
+    expect(normalizeTier('TRASHED')).toBe('la')
+    expect(normalizeTier('flop')).toBe('la')
   })
   test('认不出返回 null', () => {
     expect(normalizeTier('不存在的档')).toBeNull()
@@ -116,14 +124,31 @@ describe('parseTierResult', () => {
   })
 })
 
-describe('buildPrompt / toMarkdown', () => {
+describe('buildPrompt / buildItemsPrompt / toMarkdown', () => {
   test('prompt 含主题、条目与五档', () => {
     const p = buildPrompt('编程语言', ['Go', 'Rust'])
     expect(p).toContain('编程语言')
     expect(p).toContain('Go、Rust')
     for (const t of TIERS) expect(p).toContain(t.label)
   })
-  test('markdown 分档输出且带来源', () => {
+  test('英文 prompt 用英文档位与规则', () => {
+    const p = buildPrompt('snacks', ['chips'], 'en')
+    expect(p).toContain('GOATED/S-TIER/A-TIER/NPC/TRASHED')
+    expect(p).toContain('snacks')
+    expect(p).toContain('JSON only')
+  })
+  test('AI 列条目 prompt 与解析', () => {
+    const p = buildItemsPrompt('奶茶品牌', 8)
+    expect(p).toContain('奶茶品牌')
+    expect(p).toContain('8')
+    const pe = buildItemsPrompt('snacks', 5, 'en')
+    expect(pe).toContain('"snacks"')
+    expect(pe).toContain('5')
+    expect(parseItemsResponse('```json\n{"items":["喜茶","奈雪","一点点的奶茶"]}\n```', 3)).toEqual(['喜茶', '奈雪', '一点点的奶茶'])
+    expect(parseItemsResponse('["a","b","c","d"]', 2)).toEqual(['a', 'b'])
+    expect(() => parseItemsResponse('{"nope":1}', 3)).toThrow()
+  })
+  test('markdown 分档输出且带来源(双语)', () => {
     const md = toMarkdown('奶茶', [
       { name: '喜茶', tier: 'hang', reason: '永远的神' },
       { name: '香飘飘', tier: 'la', reason: '杯装回忆' },
@@ -132,5 +157,12 @@ describe('buildPrompt / toMarkdown', () => {
     expect(md).toContain('**喜茶** — 永远的神')
     expect(md).toContain('香飘飘')
     expect(md).toContain('hang2la')
+    const en = toMarkdown('snacks', [{ name: 'chips', tier: 'hang' }], 'en')
+    expect(en).toContain('# snacks · Tier List')
+    expect(en).toContain('## GOATED')
+  })
+  test('tierLabel 双语', () => {
+    expect(tierLabel(TIERS[0], 'zh')).toBe('夯')
+    expect(tierLabel(TIERS[0], 'en')).toBe('GOATED')
   })
 })

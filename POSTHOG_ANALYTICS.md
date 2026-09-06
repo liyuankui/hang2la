@@ -11,6 +11,8 @@
 | `manual_start` | 点「手动开排」 | |
 | `tier_generate` | AI 分档完成/失败 | `provider`, `model?`, `count?`, `ms?`, `ok` |
 | `tier_adjust` | 拖拽换档 | `to`(档位 id 或 inbox) |
+| `items_generate` | AI 列条目完成/失败 | `ok`, `count?` |
+| `lang_switch` | 切换语言 | `to`(zh/en),全局属性 `lang` |
 | `image_generate` | AI 配图批次结束 | `ok`, `fail`, `total` |
 | `png_export` | 导出 PNG | |
 | `md_copy` | 复制文案 | |

@@ -4,6 +4,7 @@ export const PROVIDERS = [
   {
     id: 'openrouter',
     label: 'OpenRouter(有免费模型)',
+    enLabel: 'OpenRouter (free models)',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'google/gemma-4-31b-it:free',
     keyUrl: 'https://openrouter.ai/keys',
@@ -11,6 +12,7 @@ export const PROVIDERS = [
   {
     id: 'zhipu',
     label: '智谱 BigModel(GLM-4-Flash 免费档)',
+    enLabel: 'Zhipu BigModel (GLM-4-Flash free)',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     model: 'glm-4-flash',
     keyUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
@@ -18,6 +20,7 @@ export const PROVIDERS = [
   {
     id: 'deepseek',
     label: 'DeepSeek',
+    enLabel: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
     keyUrl: 'https://platform.deepseek.com/api_keys',
@@ -25,6 +28,7 @@ export const PROVIDERS = [
   {
     id: 'openai',
     label: 'OpenAI',
+    enLabel: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
     keyUrl: 'https://platform.openai.com/api-keys',
@@ -32,6 +36,7 @@ export const PROVIDERS = [
   {
     id: 'custom',
     label: '自定义(OpenAI 兼容)',
+    enLabel: 'Custom (OpenAI-compatible)',
     baseUrl: '',
     model: '',
     keyUrl: '',
