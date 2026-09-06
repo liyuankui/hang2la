@@ -145,6 +145,8 @@ const DEMO = {
 
 function startManual(topic, items, via) {
   if (!items.length) return toast('先填条目,每行一个')
+  const rawLines = els['items'].value.split('\n').filter((l) => l.trim()).length
+  if (rawLines > items.length) toast(`条目超过 ${items.length} 个,已取前 ${items.length} 个`)
   state = { topic, results: items.map((name) => ({ name, tier: null, reason: '' })) }
   renderBoard()
   track(via)
@@ -164,9 +166,11 @@ els['btn-ai'].addEventListener('click', async () => {
   const topic = els['topic'].value.trim() || '这个主题'
   const items = parseItems(els['items'].value)
   if (!items.length) return toast('先填条目,每行一个')
+  const rawLines = els['items'].value.split('\n').filter((l) => l.trim()).length
+  if (rawLines > items.length) toast(`条目超过 ${items.length} 个,已取前 ${items.length} 个`)
   if (!config.apiKey) {
     openSettings()
-    return toast('填个 API Key 才能智能分档(有免费款)')
+    return
   }
   const btn = els['btn-ai']
   btn.disabled = true
