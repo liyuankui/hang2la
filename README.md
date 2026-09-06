@@ -25,7 +25,7 @@
 | 智谱 BigModel | GLM-4-Flash 免费档 | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) |
 | DeepSeek / OpenAI / 任意 OpenAI 兼容 | 按量付费 | 设置里自定义 Base URL |
 
-> 免费模型会轮换,生成效果不稳时可在设置里换个模型名。
+> 免费模型高峰期可能限流(报 429 就换一个 `:free` 模型重试),模型会轮换,可在设置里随时改。
 
 ## 隐私
 

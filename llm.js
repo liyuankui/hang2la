@@ -5,7 +5,7 @@ export const PROVIDERS = [
     id: 'openrouter',
     label: 'OpenRouter(有免费模型)',
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'deepseek/deepseek-chat-v3-0324:free',
+    model: 'google/gemma-4-31b-it:free',
     keyUrl: 'https://openrouter.ai/keys',
   },
   {
