@@ -91,7 +91,8 @@ export function parseTierResult(raw, items) {
     const row = match(item)
     const tier = normalizeTier(row?.tier ?? row?.level ?? row?.rank) ?? 'npc'
     const reason = String(row?.reason ?? row?.comment ?? '').trim().slice(0, 60)
-    return { name: item, tier, reason }
+    const emoji = String(row?.emoji ?? '').trim().slice(0, 8).replace(/^['"]|['"]$/g, '')
+    return { name: item, tier, reason, emoji: /^\p{Extended_Pictographic}/u.test(emoji) ? emoji : '' }
   })
 }
 
@@ -105,7 +106,8 @@ export function buildPrompt(topic, items) {
 1. 每个条目必须且只能进一档,不许遗漏
 2. 「夯」最强,「拉完了」最差,按大众口碑与你的判断排
 3. 每条给一句不超过 20 字的毒舌点评,幽默但别刻薄到人身攻击
-4. 只输出 JSON,格式:{"results":[{"name":"条目","tier":"档位(夯/顶级/人上人/NPC/拉完了)","reason":"点评"}]}`
+4. 每条配一个最贴合的 emoji(单个,别用组合表情)
+5. 只输出 JSON,格式:{"results":[{"name":"条目","tier":"档位(夯/顶级/人上人/NPC/拉完了)","reason":"点评","emoji":"🚀"}]}`
 }
 
 // 榜单 → Markdown 分享文本
@@ -115,7 +117,7 @@ export function toMarkdown(topic, results) {
     const rows = results.filter((r) => r.tier === t.id)
     if (!rows.length) continue
     lines.push(`## ${t.label}`, '')
-    for (const r of rows) lines.push(`- **${r.name}**${r.reason ? ` — ${r.reason}` : ''}`)
+    for (const r of rows) lines.push(`- **${r.emoji ? `${r.emoji} ` : ''}${r.name}**${r.reason ? ` — ${r.reason}` : ''}`)
     lines.push('')
   }
   lines.push('> 由 hang2la 智能生成')

@@ -87,7 +87,13 @@ function renderBoard() {
       chip.dataset.name = m.name
       const name = document.createElement('div')
       name.className = 'name'
-      name.textContent = m.name
+      if (m.emoji) {
+        const emoji = document.createElement('span')
+        emoji.className = 'emoji'
+        emoji.textContent = m.emoji + ' '
+        name.appendChild(emoji)
+      }
+      name.appendChild(document.createTextNode(m.name))
       chip.appendChild(name)
       if (m.reason) {
         const reason = document.createElement('div')

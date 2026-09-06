@@ -98,6 +98,19 @@ describe('parseTierResult', () => {
     const raw = JSON.stringify({ results: [{ name: 'Go', tier: '??' }] })
     expect(parseTierResult(raw, ['Go'])[0].tier).toBe('npc')
   })
+  test('emoji 提取与非 emoji 兜底', () => {
+    const raw = JSON.stringify({
+      results: [
+        { name: 'Go', tier: '夯', emoji: '"🚀"' },
+        { name: 'Rust', tier: '顶级', emoji: '不是表情' },
+      ],
+    })
+    const out = parseTierResult(raw, ['Go', 'Rust'])
+    expect(out[0].emoji).toBe('🚀')
+    expect(out[1].emoji).toBe('')
+    const noEmoji = parseTierResult(JSON.stringify({ results: [{ name: 'Go', tier: '夯' }] }), ['Go'])
+    expect(noEmoji[0].emoji).toBe('')
+  })
   test('没有数组结构抛错', () => {
     expect(() => parseTierResult('{"foo": 1}', items)).toThrow()
   })
